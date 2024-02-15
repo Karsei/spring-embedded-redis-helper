@@ -1,0 +1,16 @@
+{
+  "private": true,
+  "devDependencies": {
+    "@commitlint/cli": "^18.6.0",
+    "@commitlint/config-conventional": "^18.6.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "husky": "^9.0.10",
+    "semantic-release": "^22.0.4",
+    "semantic-release-replace-plugin": "^1.2.7"
+  },
+  "scripts": {
+    "commitlint": "commitlint --edit",
+    "semantic-release": "semantic-release --no-ci --dry-run false"
+  }
+}
