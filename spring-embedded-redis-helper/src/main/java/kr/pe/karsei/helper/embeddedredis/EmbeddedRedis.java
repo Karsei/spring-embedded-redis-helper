@@ -52,8 +52,13 @@ public class EmbeddedRedis implements InitializingBean, DisposableBean {
                 .setting("requirepass " + this.password)
                 .build();
         log.info("Embedded Redis - Trying start redis on port {}...", port);
-        redisServer.start();
-        log.info("Embedded Redis - Started on port {}.", port);
+        try {
+            redisServer.start();
+            log.info("Embedded Redis - Started on port {}.", port);
+        } catch (Exception e) {
+            redisServer.stop();
+            throw e;
+        }
     }
 
     @Override
