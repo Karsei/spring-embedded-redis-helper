@@ -1,0 +1,2 @@
+org.springframework.test.context.ContextCustomizerFactory=\
+kr.pe.karsei.helper.embeddedredis.EmbeddedRedisContextCustomizerFactory

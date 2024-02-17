@@ -3,8 +3,6 @@ package kr.pe.karsei.helper.embeddedredis;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
 import redis.embedded.RedisExecProvider;
 import redis.embedded.RedisServer;
@@ -15,34 +13,26 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 @Slf4j
-@Configuration(proxyBeanMethods = false)
-public class EmbeddedRedisConfiguration implements InitializingBean, DisposableBean {
-    /**
-     * 포트
-     * <p>{@link org.springframework.boot.autoconfigure.data.redis.RedisProperties} 를 쓰지 않는 이유는 prefix 값이 javax(spring.redis), jakarta(spring.data.redis) 에 따라 서로 다르기 때문</p>
-     */
-    @Value("#{'${spring.redis.port:${spring.data.redis.port:0}}'}")
-    private int port;
+public class EmbeddedRedis implements InitializingBean, DisposableBean {
+    private static RedisServer redisServer;
+    private static int port;
 
-    /**
-     * 비밀번호
-     * <p>{@link org.springframework.boot.autoconfigure.data.redis.RedisProperties} 를 쓰지 않는 이유는 prefix 값이 javax(spring.redis), jakarta(spring.data.redis) 에 따라 서로 다르기 때문</p>
-     */
-    @Value("#{'${spring.redis.password:${spring.data.redis.password:}}'}")
-    private String password;
+    private final String password;
 
-    private RedisServer redisServer;
+    public EmbeddedRedis(String password) throws IOException {
+        this.password = password;
+    }
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        // 값 확인
-        if (0 == port)
-            throw new IllegalArgumentException("Redis Port 가 존재하지 않습니다.");
-        if (!StringUtils.hasText(password))
-            throw new IllegalArgumentException("Redis Password 가 존재하지 않습니다.");
+        // 이미 할당받은 적이 있다면 건너뜀
+        if (redisServer != null) {
+            log.info("Embedded Redis - Already server started, starting skipped.");
+            return;
+        }
 
         // 테스트 실행 시 포트 충돌 막기 위함
-        int port = isRedisRunning() ? findAvailablePort() : this.port;
+        port = findAvailablePort();
 
         RedisExecProvider redisExecProvider = RedisExecProvider.defaultProvider()
                 // https://github.com/redis-windows/redis-windows
@@ -58,26 +48,33 @@ public class EmbeddedRedisConfiguration implements InitializingBean, DisposableB
         redisServer = RedisServer.builder()
                 .redisExecProvider(redisExecProvider)
                 .port(port)
-                .setting("maxmemory 64M")
+                .setting("maxmemory 128M")
                 .setting("requirepass " + this.password)
                 .build();
+        log.info("Embedded Redis - Trying start redis on port {}...", port);
         redisServer.start();
+        log.info("Embedded Redis - Started on port {}.", port);
     }
 
     @Override
     public void destroy() {
-        if (redisServer != null)
+        if (redisServer != null) {
+            log.info("Embedded Redis - Shutdown initiated... (port: {})", port);
             redisServer.stop();
+            log.info("Embedded Redis - Shutdown completed. (port: {})", port);
+        }
     }
 
-    private boolean isRedisRunning() throws IOException {
-        return isRunning(executeGrepProcessCommand(this.port));
+    public int getPort() {
+        return port;
     }
 
-    public int findAvailablePort() throws IOException {
+    private int findAvailablePort() throws IOException {
         for (int port = 10000; port <= 65535; port++) {
             Process process = executeGrepProcessCommand(port);
-            if (!isRunning(process)) {
+            boolean isRunning = isRunning(process);
+            process.destroy();
+            if (!isRunning) {
                 return port;
             }
         }
@@ -112,7 +109,7 @@ public class EmbeddedRedisConfiguration implements InitializingBean, DisposableB
         return StringUtils.hasText(pidInfo.toString());
     }
 
-    static boolean isAppleSilicon() {
+    private boolean isAppleSilicon() {
         String OS = getOs();
         if (OS.contains("mac")) {
             String arch = System.getProperty("os.arch").toLowerCase();
@@ -121,7 +118,7 @@ public class EmbeddedRedisConfiguration implements InitializingBean, DisposableB
         return false;
     }
 
-    static String getOs() {
+    private String getOs() {
         return System.getProperty("os.name").toLowerCase();
     }
 }
