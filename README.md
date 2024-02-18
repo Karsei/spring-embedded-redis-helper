@@ -24,17 +24,3 @@ Spring 용 Embedded Redis 라이브러리
 해당 라이브러리를 clone 하여 `demo` 모듈에서 직접 시험해볼 수 있습니다.
 
 애플리케이션을 실행한 후, http://localhost/swagger-ui/index.html 으로 접근하여 테스트를 해볼 수 있습니다.
-
-## 설정 추가
-
-사용하길 원하는 프로젝트에서 `@Import` 를 사용하여 `EmbeddedRedisConfiguration` 클래스를 불러옵니다.
-
-프로필을 지정하여 사용할 경우 아래와 같이 사용할 수 있습니다.
-
-```java
-@Profile({"default", "test"})
-@Configuration(proxyBeanMethods = false)
-@Import(EmbeddedRedisConfiguration.class)
-public class DemoEmbeddedRedisConfiguration {
-}
-```

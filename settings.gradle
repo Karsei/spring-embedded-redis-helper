@@ -1,3 +1,3 @@
 rootProject.name = 'spring-embedded-redis-helper'
-include ':demo',
-        ':spring-embedded-redis-helper'
+include ':spring-embedded-redis-helper',
+        ':demo'
