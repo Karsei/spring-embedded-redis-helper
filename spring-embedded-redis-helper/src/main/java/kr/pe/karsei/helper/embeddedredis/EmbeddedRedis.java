@@ -21,8 +21,11 @@ public class EmbeddedRedis implements InitializingBean, DisposableBean {
 
     public EmbeddedRedis(String password) throws IOException {
         this.password = password;
-        // 테스트 실행 시 포트 충돌 막기 위함
-        port = findAvailablePort();
+
+        if (redisServer == null) {
+            // 테스트 실행 시 포트 충돌 막기 위함
+            port = findAvailablePort();
+        }
     }
 
     @Override

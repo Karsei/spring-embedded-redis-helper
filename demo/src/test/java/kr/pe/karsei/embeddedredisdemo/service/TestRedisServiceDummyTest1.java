@@ -9,13 +9,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 @SpringBootTest
-class TestRedisServiceTest {
+class TestRedisServiceDummyTest1 {
     @Autowired
     private TestRedisService service;
 
     @Test
-    void testRedis() {
+    void testRedis1() {
         Boolean result = Assertions.assertDoesNotThrow(() -> service.insert("test", "hello, world!"));
+        assertThat(result).isNotNull();
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void testRedis2() {
+        Boolean result = Assertions.assertDoesNotThrow(() -> service.insert("test1", "hello, world!"));
+        assertThat(result).isNotNull();
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void testRedis3() {
+        Boolean result = Assertions.assertDoesNotThrow(() -> service.insert("test3", "hello, world!"));
         assertThat(result).isNotNull();
         assertThat(result).isTrue();
     }
