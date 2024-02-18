@@ -35,7 +35,7 @@ public class EmbeddedRedis implements InitializingBean, DisposableBean {
 
         RedisExecProvider redisExecProvider = RedisExecProvider.defaultProvider()
                 // https://github.com/redis-windows/redis-windows
-                .override(OS.WINDOWS, "binary/redis/redis-server-6.2.14-x64.exe")
+                .override(OS.WINDOWS, "binary/redis/redis-server-3.0.504-x64.exe")
                 // openjdk image 상에서 apk add --update redis 실행 후 바이너리 복사
                 .override(OS.UNIX, "binary/redis/redis-server-6.2.12-unix")
                 // https://download.redis.io/releases/
