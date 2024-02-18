@@ -21,18 +21,17 @@ public class EmbeddedRedis implements InitializingBean, DisposableBean {
 
     public EmbeddedRedis(String password) throws IOException {
         this.password = password;
+        // 테스트 실행 시 포트 충돌 막기 위함
+        port = findAvailablePort();
     }
 
     @Override
-    public void afterPropertiesSet() throws Exception {
+    public void afterPropertiesSet() {
         // 이미 할당받은 적이 있다면 건너뜀
         if (redisServer != null) {
             log.info("Embedded Redis - Already server started, starting skipped.");
             return;
         }
-
-        // 테스트 실행 시 포트 충돌 막기 위함
-        port = findAvailablePort();
 
         RedisExecProvider redisExecProvider = RedisExecProvider.defaultProvider()
                 // https://github.com/redis-windows/redis-windows
