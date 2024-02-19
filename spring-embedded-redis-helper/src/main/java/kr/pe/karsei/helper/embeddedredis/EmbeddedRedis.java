@@ -21,15 +21,21 @@ public class EmbeddedRedis implements InitializingBean, DisposableBean {
 
     public EmbeddedRedis(String password) throws IOException {
         this.password = password;
-
         if (redisServer == null) {
             // 테스트 실행 시 포트 충돌 막기 위함
-            port = findAvailablePort();
+            this.port = findAvailablePort();
+        }
+    }
+
+    public EmbeddedRedis(int port, String password) {
+        this.password = password;
+        if (redisServer == null) {
+            this.port = port;
         }
     }
 
     @Override
-    public void afterPropertiesSet() {
+    public synchronized void afterPropertiesSet() {
         // 이미 할당받은 적이 있다면 건너뜀
         if (redisServer != null) {
             log.info("Embedded Redis - Already server started, starting skipped.");
@@ -37,8 +43,8 @@ public class EmbeddedRedis implements InitializingBean, DisposableBean {
         }
 
         RedisExecProvider redisExecProvider = RedisExecProvider.defaultProvider()
-                // https://github.com/redis-windows/redis-windows
-                .override(OS.WINDOWS, "binary/redis/redis-server-3.0.504-x64.exe")
+                // https://github.com/tporadowski/redis
+                .override(OS.WINDOWS, "binary/redis/redis-server-5.0.14-x64.exe")
                 // openjdk image 상에서 apk add --update redis 실행 후 바이너리 복사
                 .override(OS.UNIX, "binary/redis/redis-server-6.2.12-unix")
                 // https://download.redis.io/releases/
@@ -64,8 +70,8 @@ public class EmbeddedRedis implements InitializingBean, DisposableBean {
     }
 
     @Override
-    public void destroy() {
-        if (redisServer != null) {
+    public synchronized void destroy() {
+        if (redisServer != null && redisServer.isActive()) {
             log.info("Embedded Redis - Shutdown initiated... (port: {})", port);
             redisServer.stop();
             log.info("Embedded Redis - Shutdown completed. (port: {})", port);
@@ -92,7 +98,7 @@ public class EmbeddedRedis implements InitializingBean, DisposableBean {
     private Process executeGrepProcessCommand(int port) throws IOException {
         String OS = getOs();
         if (OS.contains("win")) {
-            log.info("OS is  " + OS + " " + port);
+            log.info("OS is " + OS + " " + port);
             String command = String.format("netstat -nao | find \"LISTEN\" | find \"%d\"", port);
             String[] shell = {"cmd.exe", "/y", "/c", command};
             return Runtime.getRuntime().exec(shell);
