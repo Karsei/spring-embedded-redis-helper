@@ -7,7 +7,7 @@ Spring 용 Embedded Redis 라이브러리
 ## 바이너리 빌드 대상
 
 * Windows
-  * https://github.com/redis-windows/redis-windows 에서 제공하는 exe 파일을 가져왔습니다.
+  * https://github.com/tporadowski/redis 에서 제공하는 exe 파일을 가져왔습니다.
 * Unix
   * 주로 CI/CD를 통해 이용된다는 점을 고려하여 Docker OpenJDK Alpine 이미지에서 `apk add --update redis` 실행 후 빌드되는 `/usr/bin/redis-server` 를 가져왔습니다.
 * MacOS
