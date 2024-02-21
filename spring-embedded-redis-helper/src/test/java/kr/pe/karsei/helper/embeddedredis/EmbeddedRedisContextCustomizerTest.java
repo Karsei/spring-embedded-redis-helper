@@ -39,6 +39,6 @@ class EmbeddedRedisContextCustomizerTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> customizer.customizeContext(context, null));
         assertThat(exception)
                 .isNotNull()
-                .hasMessage("");
+                .hasMessage("Redis Password 가 존재하지 않습니다.");
     }
 }
