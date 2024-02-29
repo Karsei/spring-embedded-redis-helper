@@ -7,9 +7,11 @@ import org.springframework.test.context.ContextCustomizerFactory;
 import java.util.List;
 
 public class EmbeddedRedisContextCustomizerFactory implements ContextCustomizerFactory {
+    private static final ContextCustomizer contextCustomizer = new EmbeddedRedisContextCustomizer();
+
     @Override
     public ContextCustomizer createContextCustomizer(Class<?> testClass,
                                                      List<ContextConfigurationAttributes> configAttributes) {
-        return new EmbeddedRedisContextCustomizer();
+        return contextCustomizer;
     }
 }
