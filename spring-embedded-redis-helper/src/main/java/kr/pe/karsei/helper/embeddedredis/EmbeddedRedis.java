@@ -1,5 +1,6 @@
 package kr.pe.karsei.helper.embeddedredis;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -11,19 +12,31 @@ import redis.embedded.util.OS;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Random;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
 public class EmbeddedRedis implements InitializingBean, DisposableBean {
+    private final ReentrantLock lock = new ReentrantLock();
     private static RedisServer redisServer;
-    private static int port;
 
+    @Getter
+    private static int port;
+    @Getter
     private final String password;
 
     public EmbeddedRedis(String password) throws IOException {
         this.password = password;
         if (redisServer == null) {
-            // 테스트 실행 시 포트 충돌 막기 위함
-            this.port = findAvailablePort();
+        lock.lock();
+            try {
+                if (redisServer == null) {
+                    // 테스트 실행 시 포트 충돌 막기 위함
+                    this.port = findAvailablePort();
+                }
+            } finally {
+                lock.unlock();
+            }
         }
     }
 
@@ -35,61 +48,83 @@ public class EmbeddedRedis implements InitializingBean, DisposableBean {
     }
 
     @Override
-    public synchronized void afterPropertiesSet() {
+    public void afterPropertiesSet() {
         // 이미 할당받은 적이 있다면 건너뜀
         if (redisServer != null) {
             log.info("Embedded Redis - Already server started, starting skipped.");
             return;
         }
 
-        RedisExecProvider redisExecProvider = RedisExecProvider.defaultProvider()
-                // https://github.com/tporadowski/redis
-                .override(OS.WINDOWS, "binary/redis/redis-server-5.0.14-x64.exe")
-                // openjdk image 상에서 apk add --update redis 실행 후 바이너리 복사
-                .override(OS.UNIX, "binary/redis/redis-server-6.2.12-unix")
-                // https://download.redis.io/releases/
-                // 직접 빌드 후 바이너리 복사
-                .override(OS.MAC_OS_X, isAppleSilicon()
-                        ? "binary/redis/redis-server-6.2.14-mac-arm"
-                        : "binary/redis/redis-server-6.2.14-mac-intel");
-
-        redisServer = RedisServer.builder()
-                .redisExecProvider(redisExecProvider)
-                .port(port)
-                .setting("maxmemory 128M")
-                .setting("requirepass " + this.password)
-                .build();
-        log.info("Embedded Redis - Trying start redis on port {}...", port);
+        lock.lock();
         try {
+            RedisExecProvider redisExecProvider = RedisExecProvider.defaultProvider()
+                    // https://github.com/tporadowski/redis
+                    .override(OS.WINDOWS, "binary/redis/redis-server-5.0.14-x64.exe")
+                    // openjdk image 상에서 apk add --update redis 실행 후 바이너리 복사
+                    .override(OS.UNIX, "binary/redis/redis-server-6.2.12-unix")
+                    // https://download.redis.io/releases/
+                    // 직접 빌드 후 바이너리 복사
+                    .override(OS.MAC_OS_X, isAppleSilicon()
+                            ? "binary/redis/redis-server-6.2.14-mac-arm"
+                            : "binary/redis/redis-server-6.2.14-mac-intel");
+
+            redisServer = RedisServer.builder()
+                    .redisExecProvider(redisExecProvider)
+                    .port(port)
+                    .setting("maxmemory 128M")
+                    .setting("requirepass " + this.password)
+                    .build();
+            log.info("Embedded Redis - Trying start redis on port {}...", port);
+
             redisServer.start();
             log.info("Embedded Redis - Started on port {}.", port);
         } catch (Exception e) {
             redisServer.stop();
             throw e;
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
-    public synchronized void destroy() {
+    public void destroy() {
         if (redisServer != null && redisServer.isActive()) {
-            log.info("Embedded Redis - Shutdown initiated... (port: {})", port);
-            redisServer.stop();
-            log.info("Embedded Redis - Shutdown completed. (port: {})", port);
+            lock.lock();
+            try {
+                log.info("Embedded Redis - Shutdown initiated... (port: {})", port);
+                redisServer.stop();
+                log.info("Embedded Redis - Shutdown completed. (port: {})", port);
+            } finally {
+                lock.unlock();
+            }
         }
     }
 
-    public int getPort() {
-        return port;
-    }
-
     private int findAvailablePort() throws IOException {
-        for (int port = 10000; port <= 65535; port++) {
-            Process process = executeGrepProcessCommand(port);
-            boolean isRunning = isRunning(process);
-            process.destroy();
+        int max = 65535;
+        int min = 10000;
+        int pos = 0;
+        while (pos < (max - min)) {
+            Random random = new Random();
+            int port = random.ints(10000, 65535)
+                    .findFirst()
+                    .getAsInt();
+
+            Process process = null;
+            boolean isRunning;
+            try {
+                process = executeGrepProcessCommand(port);
+                isRunning = isRunning(process);
+            } catch (Exception e) {
+                if (null != process)
+                    process.destroy();
+                throw e;
+            }
+
             if (!isRunning) {
                 return port;
             }
+            pos++;
         }
 
         throw new IllegalArgumentException("Not Found Available port: 10000 ~ 65535");

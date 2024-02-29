@@ -14,8 +14,12 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.Properties;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class EmbeddedRedisContextCustomizer implements ContextCustomizer {
+    private static EmbeddedRedis embeddedRedis;
+    private static final ReentrantLock lock = new ReentrantLock();
+
     @Override
     public void customizeContext(ConfigurableApplicationContext context,
                                  MergedContextConfiguration mergedConfig) {
@@ -37,11 +41,15 @@ public class EmbeddedRedisContextCustomizer implements ContextCustomizer {
         if (!StringUtils.hasText(password)) throw new IllegalArgumentException("Redis Password 가 존재하지 않습니다.");
 
         // Redis 실행
-        EmbeddedRedis embeddedRedis;
+        lock.lock();
         try {
-            embeddedRedis = new EmbeddedRedis(password);
+            if (null == embeddedRedis) {
+                embeddedRedis = new EmbeddedRedis(password);
+            }
         } catch (IOException e) {
             throw new RuntimeException("Embedded Redis 를 실행하는 과정에서 오류가 발생했습니다.", e);
+        } finally {
+            lock.unlock();
         }
 
         // Property 대체
